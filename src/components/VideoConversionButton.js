@@ -1,45 +1,60 @@
-import { Button } from "antd"
-import { fetchFile } from "@ffmpeg/ffmpeg"
-import { sliderValueToVideoTime } from "../utils/utils"
+import { Button } from "antd";
+import { fetchFile } from "@ffmpeg/ffmpeg";
+import { sliderValueToVideoTime } from "../utils/utils";
 
 function VideoConversionButton({
-    videoPlayerState,
-    sliderValues,
-    videoFile,
-    ffmpeg,
-    onConversionStart = () => {},
-    onConversionEnd = () => {},
-    onGifCreated = () => {},
+  videoPlayerState,
+  sliderValues,
+  videoFile,
+  ffmpeg,
+  onConversionStart = () => {},
+  onConversionEnd = () => {},
+  onTrimVideo = () => {},
 }) {
-    const convertToGif = async () => {
-        // starting the conversion process
-        onConversionStart(true)
+  const trimVideo = async () => {
+    // starting the conversion process
+    onConversionStart(true);
 
-        const inputFileName = "gif.mp4"
-        const outputFileName = "output.gif"
+    const inputFileName = "input.mp4";
+    const outputFileName = "output.mp4";
 
-        // writing the video file to memory
-        ffmpeg.FS("writeFile", inputFileName, await fetchFile(videoFile))
+    // writing the video file to memory
+    ffmpeg.FS("writeFile", inputFileName, await fetchFile(videoFile));
 
-        const [min, max] = sliderValues
-        const minTime = sliderValueToVideoTime(videoPlayerState.duration, min)
-        const maxTime = sliderValueToVideoTime(videoPlayerState.duration, max)
+    console.log(videoFile, "videoFile");
 
-        // cutting the video and converting it to GIF with a FFMpeg command
-        await ffmpeg.run("-i", inputFileName, "-ss", `${minTime}`, "-to", `${maxTime}`, "-f", "gif", outputFileName)
+    const [min, max] = sliderValues;
+    const minTime = sliderValueToVideoTime(videoPlayerState.duration, min);
+    const maxTime = sliderValueToVideoTime(videoPlayerState.duration, max);
 
-        // reading the resulting file
-        const data = ffmpeg.FS("readFile", outputFileName)
+    // cutting the video and converting it to GIF with a FFMpeg command
+    await ffmpeg.run(
+      "-i",
+      inputFileName,
+      "-ss",
+      `${minTime}`,
+      "-to",
+      `${maxTime}`,
+      "-f",
+      "mp4",
+      outputFileName
+    );
 
-        // converting the GIF file created by FFmpeg to a valid image URL
-        const gifUrl = URL.createObjectURL(new Blob([data.buffer], { type: "image/gif" }))
-        onGifCreated(gifUrl)
+    // reading the resulting file
+    const data = ffmpeg.FS("readFile", outputFileName);
 
-        // ending the conversion process
-        onConversionEnd(false)
-    }
+    // converting the GIF file created by FFmpeg to a valid image URL
+    const url = URL.createObjectURL(
+      new Blob([data.buffer], { type: videoFile.type })
+    );
 
-    return <Button onClick={() => convertToGif()}>Convert to GIF</Button>
+    onTrimVideo(url);
+
+    // ending the conversion process
+    onConversionEnd(false);
+  };
+
+  return <Button onClick={() => trimVideo()}>Crop</Button>;
 }
 
-export default VideoConversionButton
+export default VideoConversionButton;
